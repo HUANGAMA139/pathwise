@@ -1,0 +1,430 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: smart-data-qa
+
+  # 迭代 14：pgvector（RAG 向量库）。
+  # 注意它和 dashscope / MCP 无关，是一个独立的 JDBC 数据源——
+  # Spring AI 的 PgVectorStore 走的是 Spring Boot 标准的 DataSource，不自己管连接。
+  # 默认值对齐 docker-compose.yml；要改就设同名环境变量，不在这里硬编码。
+  datasource:
+    url: ${SDAQ_PGVECTOR_URL:jdbc:postgresql://localhost:5432/rag_db}
+    username: ${SDAQ_PGVECTOR_USER:sdaq}
+    password: ${SDAQ_PGVECTOR_PASSWORD:sdaq_dev_pwd}
+
+  ai:
+    dashscope:
+      # 从环境变量读取，绝不硬编码。见「环境搭建指南」第 3 步
+      api-key: ${AI_DASHSCOPE_API_KEY}
+
+      # 迭代 14：向量化（embedding）用的模型。
+      # 不写这一段也能跑——默认是 text-embedding-v2（1536 维）。
+      # 选 v3 的理由：支持自定义维度，1024 维比 1536 更省存储、检索也更快，
+      # 而 v3 的默认维度本来就是 1024，所以这里即使漏配也不会和表结构对不上。
+      embedding:
+        options:
+          model: text-embedding-v3
+          dimensions: 1024
+
+    # 迭代 10：把项目工具暴露成 MCP Server
+    mcp:
+      server:
+        name: smart-data-qa
+        version: 1.0.0
+        # STREAMABLE：MCP 现在推荐的传输方式（SSE 是旧的，STATELESS 适合无状态场景）
+        protocol: STREAMABLE
+        instructions: "销售数据问答服务。可以问具体业务数字（走数据库），也可以问统计口径和制度规则（走文档），系统会自动判断该走哪边。"
+        capabilities:
+          tool: true
+        streamable-http:
+          # 外部客户端连这个地址，完整 URL 是 http://localhost:8080/mcp
+          mcp-endpoint: /mcp
+
+    # 迭代 14：pgvector 向量库。
+    # 迭代 13 的「存进一个内存 List」这一步，从本轮起换成真正的向量库。
+    vectorstore:
+      pgvector:
+        # 【注意】默认是 false！1.0 之后改成必须显式打开，官方文档管这叫 breaking change。
+        # 打开后由它负责 CREATE EXTENSION vector 和建 vector_store 表。
+        initialize-schema: true
+        # 必须与 embedding 模型输出的维度一致，而且**建表时就把维度写进列类型**——
+        # 以后想换模型（换维度）就得删表重建，见 docs/14-向量检索接通.md
+        dimensions: 1024
+        index-type: HNSW
+        distance-type: COSINE_DISTANCE
+        table-name: vector_store
+
+logging:
+  level:
+    root: INFO
+    com.example.smartdataqa: DEBUG
+    # 打开 MCP 协议日志，启动时能看到工具注册情况——这是验证 Server 起没起来的第一手信息
+    io.modelcontextprotocol: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%logger{20}] - %msg%n"
+
+# 自定义开关
+#
+# 注意启动命令里那个引号：PowerShell 会把不加引号的 -Dxxx=yyy 从中间拆开，
+# 导致 Maven 报 "Unknown lifecycle phase"。所以整段 -D 参数要用引号包住。
+sdaq:
+  smoke:
+    # 置为 true 时，应用启动会调用一次模型做冒烟测试（迭代 1 用来验证环境）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.smoke.enabled=true"
+    enabled: false
+
+  exp2:
+    # 置为 true 时，启动会跑一遍手写的 Agent 循环（迭代 2 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp2.enabled=true"
+    enabled: false
+
+  exp3:
+    # 置为 true 时，启动会跑一遍 ReAct 显式推理循环（迭代 3 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp3.enabled=true"
+    enabled: false
+
+  exp4:
+    # 置为 true 时，启动会跑一遍上下文压缩演示（迭代 4 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp4.enabled=true"
+    enabled: false
+
+  exp5:
+    # 置为 true 时，启动会跑一遍「计划 + 权限门」演示（迭代 5 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp5.enabled=true"
+    enabled: false
+
+  exp6:
+    # 置为 true 时，启动会跑一遍 Spring AI 版的循环（迭代 6 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp6.enabled=true"
+    enabled: false
+
+  exp7:
+    # 置为 true 时，启动会跑 Advisor / 结构化输出 / 流式 演示（迭代 7 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp7.enabled=true"
+    enabled: false
+
+  exp8:
+    # 置为 true 时，启动会跑双支路骨架的端到端演示（迭代 8 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp8.enabled=true"
+    enabled: false
+
+  exp9:
+    # 置为 true 时，启动会跑「关键词 vs LLM」两个路由策略的对比（迭代 9 的学习产物）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp9.enabled=true"
+    enabled: false
+
+  exp11:
+    # 置为 true 时，启动会跑检查点①的端到端 demo（10 个问题，流式输出）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp11.enabled=true"
+    enabled: false
+
+  exp12:
+    # 置为 true 时，启动会跑语料概览与检索边界 demo
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp12.enabled=true"
+    enabled: false
+
+  exp13:
+    # 置为 true 时，启动会跑分块对比实验（3 种切法 × 5 个问题）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp13.enabled=true"
+    enabled: false
+
+  exp14:
+    # 置为 true 时，启动会跑「向量检索 vs 字符匹配」的对比 demo
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp14.enabled=true"
+    enabled: false
+
+  exp15:
+    # 置为 true 时，启动会跑评测：28 条用例 × 2 条链路，结果追加写入 eval/metrics.csv
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp15.enabled=true"
+    enabled: false
+
+  exp16:
+    # 置为 true 时，启动会跑「向量 / BM25 / 混合 RRF」三种检索的对比（确定性的检索层指标）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp16.enabled=true"
+    enabled: false
+
+  exp17:
+    # 置为 true 时，启动会跑「粗排召回 × 精排打分」的 A/B（6 组，含多样性指标）
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp17.enabled=true"
+    enabled: false
+
+  exp18:
+    # 置为 true 时，启动会跑一遍 Text2SQL v1 的诊断（9 道题，打印生成的 SQL / 结果 / 判定）
+    # 需要业务库在跑：docker compose up -d business-db
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp18.enabled=true"
+    enabled: false
+
+  exp19:
+    # 置为 true 时，启动会跑表筛选对比实验（20 张表 × 4 种模式：none/bm25/vector/hybrid）
+    # 需要业务库在跑：docker compose up -d business-db
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp19.enabled=true"
+    enabled: false
+
+  exp20:
+    # 置为 true 时，启动会跑 ①few-shot 消融（0/1/3/7 条 × 迭代 18 那 9 道题）
+    # ②错误自修复验收（同一条被改坏的 SQL，修 vs 不修）
+    # 需要业务库在跑：docker compose up -d business-db
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp20.enabled=true"
+    enabled: false
+
+  exp21:
+    # 置为 true 时，启动会跑 SQL 安全边界的测试用例：
+    #   ① 攻击清单必须全被拦（含「WITH 里藏 DELETE」这种绕白名单的）
+    #   ② 合法查询必须放行（含 迭代 20 真实生成过的 SQL 原文，防误报）
+    #   ③ 端到端：用故障注入让模型真的产出 DROP TABLE，验证被拦住
+    # 需要业务库在跑：docker compose up -d business-db
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp21.enabled=true"
+    enabled: false
+
+  exp22:
+    # 置为 true 时，启动会跑 Text2SQL 支路的评测（第二个基线数字）：
+    #   支路集：诊断 9 题（D1—D9，绕过路由）× 4 种配置（不筛/筛表/自修复的受控对照）
+    #   端到端：testset 里 database/both 的 8 题，走完整 Agent
+    #   外加一个自修复延迟微基准（故障注入，控制变量）
+    # 需要业务库在跑；【且建议先扩到 20 张表】——否则「筛表 vs 不筛表」两档必然一样。
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp22.enabled=true"
+    enabled: false
+
+  exp23:
+    # 置为 true 时，启动会跑【评测报告】：一条命令跑完 28 条用例，出六类指标
+    # （路由准确率 + 混淆矩阵 / 检索 / 生成 / 执行准确率 / 端到端正确率），
+    # 产出控制台表 + eval/report.md（README 用）+ eval/report.csv（一次报告一行）。
+    # 需要 pgvector 与 business-db 都在跑。
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp23.enabled=true"
+    enabled: false
+
+  exp24:
+    # 置为 true 时，启动会跑【路由 v2：多策略对比】——28 条用例 × 5 个策略（A/A2/B/C/D），
+    # 比 准确率 × 延迟 × 成本（token）。产出 eval/router-compare.csv（策略 × 题 一行）。
+    # 需要 pgvector（应用要起）；业务库不在线也能跑（「我手上有什么」会退化成静态描述）。
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp24.enabled=true"
+    enabled: false
+
+  exp26:
+    # 置为 true 时，启动会跑【RAG 五件套消融】——2 改写 × 3 检索 × 3 重排 = 18 组，
+    # 出「每层开关 → 评测分数」的表；并先做一段【纯重构回归检查】（比对新旧装配的片段 id）。
+    # 产出 eval/rag-ablation.csv。需要 pgvector 在跑。
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp26.enabled=true"
+    enabled: false
+
+  exp28:
+    # 置为 true 时，启动会跑【多轮对话：上下文压缩 A/B】——
+    #   无历史 / 全量历史 / 压缩历史 三档 × 4 轮脚本对话，
+    #   判据是【确定性的】：改写结果里有没有补回被指代的名词（字符串包含，不花判分成本）。
+    # 产出 eval/multiturn-compare.csv。
+    # ⚠️ 这只是 迭代 28 的「第四问」；前三问（端到端消融）用 exp23 加开关跑，见 docs/28-端到端消融实验.md
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp28.enabled=true"
+    enabled: false
+
+  exp29:
+    # 置为 true 时，启动会跑【工程化自检】——
+    #   ① 逐题打印结构化轨迹：路由选了哪条 / 检索到几段 / SQL 是什么 / 每步多少毫秒
+    #   ② 把第 1 题原样再问一遍，验证缓存命中（耗时掉到接近 0、且不调模型）
+    #   ③ 打印缓存命中率
+    # mvn spring-boot:run "-Dspring-boot.run.arguments=--sdaq.exp29.enabled=true"
+    enabled: false
+
+  # 迭代 28：多轮对话的上下文压缩（迭代 4 的 ContextCompactor 第一次接进多轮）。
+  # 它有两个使用方：① exp28 的受控实验 ② 迭代 29 起对外 REST /chat 的会话表。
+  # ⚠️ max-messages=5 是【exp28 受控实验的值】—— 调小是为了在 5 轮对话里【强制触发】压缩。
+  #    真实使用下这个值应该大得多（几千 token 量级），改成消息条数只是为了实验可控。
+  #    【对外服务上线前应当把它调大】，否则正常对话两三句就开始压，细节会被丢掉。
+  memory:
+    # 迭代 29：多轮的总开关。关掉 = 每轮带全量历史、不做摘要压缩。
+    enabled: true
+    # 迭代 29：同时在线的会话数上限。超了回收「最久没用过的」。
+    # 【必须设上限】：不设的话，「每次请求都带一个新 sessionId」就是一个内存泄漏入口——
+    # 每次调用都新建一个持有整段历史的对象，永远不释放。
+    max-sessions: 100
+    max-messages: 5
+    keep-recent: 2
+
+  # 迭代 29：答案缓存（相同问题不重复调模型）。
+  #
+  # ⚠️ 它【只作用于对外服务】（REST /chat 与 MCP 工具）。
+  #    评测路径（迭代 15/23/28 的 runner）直接调 SmartQaAgent，**走不到这里**——
+  #    所以这里默认开，也不会污染任何历史基线。
+  #    这条边界是「缓存放哪一层」换来的：它在 service/QaService，而不是塞进 SmartQaAgent。
+  #
+  # ⚠️ 它是【内存缓存，重启即失效】。改了语料（重新分块入库）或改了业务库表结构之后，
+  #    旧答案就过期了——这一步没有自动检测，靠重启。（要更细的失效，得给 key 加版本号。）
+  cache:
+    enabled: true
+    # 最多缓存多少条。超了按「最久没存进来的先走」回收。
+    max-entries: 200
+    # 每条活多久（秒）。短一点更安全，长一点更省调用。
+    ttl-seconds: 600
+
+  # 迭代 16：文档支路用哪种检索。
+  #   vector = 只向量（迭代 14 的基线，可复现）
+  #   bm25   = 只关键词
+  #   hybrid = 双通道 + RRF 融合（默认）
+  # 做成开关是为了「任何一天的基线都能一键复现」——评测项目最怕的就是旧基线跑不了了。
+  retrieval:
+    mode: hybrid
+
+  # 迭代 16：混合检索的融合参数。这两个数字是被实验逼出来的，不是拍的：
+  # 默认值从 (k=60, 候选=5) 改成 (k=30, 候选=10) ——
+  # 第一次对比跑出来混合反而比单向量差（hit@1 0.87→0.73），机制指向「k 太大把名次差异压平」
+  # 和「候选池太浅」。改成可扫的，是为了让「方法不行」和「参数不行」分得开。
+  hybrid:
+    # 每路在融合前取多少个候选。太小的话，某一路的正确答案可能根本进不了候选池。
+    candidates: 10
+    # RRF 的 k。越小，名次靠前的边际收益越大（k=60 是 RRF 原论文取值）。
+    rrf-k: 30
+
+  # 迭代 17：精排（两阶段检索的第二阶段：粗排召回 → 精排打分）。
+  # 实测说明（迭代 16）：单靠 RRF 融合是负收益，根因是「两路可信度不相当」。
+  # 精排是另一条路——它不比名次，而是**真的读问题和候选正文**判断相关性。
+  rerank:
+    #   none = 不做精排（迭代 15/16 的形状，可复现）
+    #   llm  = 用模型给候选重排（每查询 1 次调用，temperature=0 求可复现）
+    #   mmr  = 最大边际相关性（纯数学，用 embedding 算，既看相关性也看重复度）
+    mode: llm
+    # 粗排先取多少个候选交给精排。**精排再好也救不回没被召回的片段**——这是精排的天花板。
+    candidates: 10
+    # MMR 的 λ：1 = 只看相关性（退化成普通排序），0 = 只看多样性。
+    # 0.7 是常用起点：偏向相关性，但会抑制重复。
+    mmr-lambda: 0.7
+
+  # 迭代 26：显式五层 RAG pipeline（改写 → 检索/融合 → 重排 → 注入）。
+  rag:
+    pipeline:
+      # 要不要让 Agent 主干的【文档支路】走显式五层 pipeline。
+      #   false（默认）= 走原有装配，迭代 15/23 的基线不受影响（pipeline 照建，只是不接）。
+      #   true          = 走新 pipeline。
+      #   ⚠️ 打开前先跑 迭代 26 的【纯重构回归检查】——它逐题比对新旧装配的片段 id，通过再开。
+      enabled: false
+    rewrite:
+      # 第①层 改写器。
+      #   none = 不改写（= 迭代 14—17 的形态，可复现）
+      #   llm = 用模型把口语化问题改写成更适合检索的查询
+      #         （每次提问多一次调用；**同一问题只改一次**，消融时 9 个格子共用一次）
+      mode: none
+
+  eval:
+    # 测试集与结果文件（相对项目根目录）
+    testset: eval/testset.csv
+    metrics: eval/metrics.csv
+    # 迭代 16：检索层对比结果（hit@k / MRR，确定性指标，和 metrics.csv 不同表）
+    retrieval-metrics: eval/retrieval-compare.csv
+    # 迭代 17：重排对比结果（含多样性列）
+    rerank-metrics: eval/rerank-compare.csv
+    # 迭代 19：表筛选对比结果（每题 × 每模式一行）
+    table-select-metrics: eval/table-select-compare.csv
+    # 迭代 20：few-shot 消融结果（每种条数 × 每题一行）
+    fewshot-metrics: eval/fewshot-compare.csv
+    # 迭代 22：Text2SQL 评测逐题结果（支路集 + 端到端）
+    text2sql-metrics: eval/text2sql-eval.csv
+    # 迭代 22：Text2SQL 评测汇总（每个「集合 × 配置」一行）—— 「第二个基线数字」的落点
+    text2sql-summary: eval/text2sql-eval-summary.csv
+    # 迭代 23：评测报告（README 用）+ 它的 CSV 汇总（一次报告一行）
+    report: eval/report.md
+    report-csv: eval/report.csv
+    # 迭代 24：路由策略对比（策略 × 题 一行）
+    router-metrics: eval/router-compare.csv
+    # 迭代 26：RAG 五件套消融（配置 × 一行）
+    rag-ablation-metrics: eval/rag-ablation.csv
+    # 迭代 28：多轮 + 上下文压缩对比（档 × 轮 一行）
+    multiturn-metrics: eval/multiturn-compare.csv
+    # 只跑前 N 条用例（调试用；0 或负数 = 全跑）
+    # 全量一次约 250~300 次判分调用，耗时几分钟——迭代时先用 limit 跑几条
+    limit: 0
+
+  # 迭代 24：把 token 折成钱用的单价（元 / 千 token）。
+  # 【默认 0 = 不折算】：对比表的 ¥ 列会留空——token 列照样有效，只是不折成钱。
+  # 想折就把你自己核过的价填上。
+  # ⚠️ 别照抄别人的数字：价格会变，**以阿里云百炼控制台当前价为准**。
+  #    （我刻意没给默认值——没核过的价写进配置，和写进文档一样糟。）
+  router-bench:
+    price-per-1k-prompt: 0
+    price-per-1k-completion: 0
+
+  # 迭代 13 定的分块参数。取值理由见 docs/13-分块对比记录.md 第六节。
+  # 关键约束：chunkSize 必须 ≤350，否则 XR-2000B / XR-2000C 会落进同一个片段，
+  # 检索层面再也分不开（这两个型号价格和定位都不同，混了是数据事故）。
+  corpus:
+    chunk-size: 300
+
+  # ------------------------------------------------------------------
+  # 迭代 18：Text2SQL 支路
+  # ------------------------------------------------------------------
+
+  # 数据库支路用哪套实现。
+  #   text2sql = 表结构注入 → 模型生成 SQL → 执行（迭代 18 起的默认形态）
+  #   mock     = 迭代 8 的硬编码实现，一键复现旧基线
+  # 和 retrieval.mode / rerank.mode 同一个理由：旧基线要能跑回来，对比才成立。
+  database:
+    mode: text2sql
+
+  # 业务库（Text2SQL 查的那个库，5433）。默认值对齐 docker-compose.yml，
+  # 要改就设同名环境变量，不在这里硬编码。
+  # 【注意】它是和 5432 的向量库物理隔离的另一个库 —— 迭代 21 的安全边界要靠这个隔离。
+  #
+  # 迭代 21：账号已换成【只读账号】sdaq_readonly（第 ③ 层防御）。
+  #   应用侧只做 SELECT（读表结构 + 跑模型生成的查询），所以换账号不影响功能；
+  #   而它是「即使应用层护栏被绕过、写操作也执行不了」的那一层。
+  #   这个账号由 docker/init-business-db-ro.sql 创建（只有 SELECT 权限）。
+  #   要临时换回有写权限的账号：把下面两行改回 sdaq / sdaq_dev_pwd。
+  business-db:
+    url: ${SDAQ_BUSINESS_URL:jdbc:postgresql://localhost:5433/business_db}
+    username: ${SDAQ_BUSINESS_USER:sdaq_readonly}
+    password: ${SDAQ_BUSINESS_PASSWORD:sdaq_ro_pwd}
+    # 单条查询超时（秒）。迭代 21 起它也是安全边界的一部分：
+    # 一条写坏的 SQL 不该把连接占住不放。
+    # 注意超时留在【连接层】是对的，行数上限却不行 —— 见下面 text2sql.max-rows 的说明。
+    query-timeout-seconds: 15
+
+  text2sql:
+    # 放进 QueryResult.rows（= 拼进 prompt）的最大行数。
+    # 【真实行数照样记在 rowCount 里】—— 这就是 QueryResult 把 rows 和 rowCount
+    # 分开的原因：既要控制上下文，又不能丢掉「到底查出来多少行」。
+    max-context-rows: 50
+
+    # 迭代 21：模型那条 SQL 最多返回多少行（<=0 = 不限）。
+    # 在【语句】这一层用 PreparedStatement.setMaxRows 截断：多余的行驱动根本不会拉回来。
+    # 【为什么不能设在连接层】我第一版就是设在连接上的，实跑立刻打脸：
+    #   它把【元数据查询也一起截断了】—— 上限调成 5 之后，SchemaRenderer 读到「5 列」（本该 26 列），
+    #   于是注入给模型的表结构悄悄少了 21 列，而且不报错。
+    #   元数据是「我们自己的小查询」，一条都不能少；这条上限管的是「模型写的东西」。
+    # ★ 撞到上限时工具会明确上报「已被截断」（真实行数拿不到，只能如实说明）。
+    max-rows: 1000
+
+    # 迭代 20：few-shot 用前几条样例（样例在 src/main/resources/text2sql/few-shot.md）。
+    # 2026-09-26 实跑消融（0/1/3/7 条 × 迭代 18 那 9 道题）：
+    #     0 条 → 0 通过 / 7 失败     1 条 → 4 通过 / 3 失败
+    #     3 条 → 5 通过 / 2 失败     7 条 → 7 通过 / 0 失败     ← 取这一档
+    # 7 条只占 2261 字符（表结构是 8175），很划算，所以按实测结果设成 7。
+    # 【注意这是「量过才开」】—— 先跑消融、再定默认值，不是先开再找理由。
+    few-shot-size: 7
+
+    # 迭代 20：SQL 执行失败后，把「失败的 SQL + 数据库报错」回灌给模型，最多让它改几次。
+    #   0 = 关闭（= 迭代 18/19 的形态，可复现）
+    # 【默认开 2】：它只在「本来就报错」的时候才动，最坏情况也就是维持原样；
+    # 而最好的情况是把一次硬失败变成一个正确答案。这个方向的赌注是划算的。
+    repair-attempts: 2
+
+    # 迭代 21：哪些列要脱敏（逗号分隔，大小写不敏感）。
+    # 【按「真实列名」判定，不是按显示名】—— 所以 `SELECT customer_name AS 客户` 这种别名遮不住它。
+    # 库里现在真正有个人信息的只有 customer_name / employee_name；
+    # 后面那几个现在还不存在，先配上，等有了自动生效（不存在的列不会误伤任何查询）。
+    masked-columns: customer_name,employee_name,phone,mobile,email,id_card,bank_card,address
+
+  # 迭代 19：表筛选。表多了不能把整个库的表结构都塞进 prompt，
+  # 所以先按问题召回少量相关的表，再只把这几张注入。
+  # 复用 迭代 16 的混合检索（Bm25Index + RrfDocumentJoiner，一行没改）。
+  table-select:
+    #   none   = 不筛，注入全部表（= 迭代 18 的形态，可复现）
+    #   bm25   = 只关键词
+    #   vector = 只语义
+    #   hybrid = 两路 + RRF 融合（默认）
+    mode: hybrid
+    # 最多把几张表的结构注入 prompt。
+    # 开宽一点更安全（漏一张表，那道题就必错），但开太宽就没省下什么了。
+    top-k: 8
+    # 融合前每路取多少候选。太浅的话，某一路选中的正确表可能根本进不了候选池。
+    candidates: 10
+    # RRF 的 k（同 迭代 16 的含义：越小，名次靠前的边际收益越大）
+    rrf-k: 30

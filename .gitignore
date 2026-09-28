@@ -1,0 +1,74 @@
+# ===== Java / Maven =====
+target/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/timing.properties
+
+# ===== IDE =====
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+
+# ===== 密钥（重要！绝对不要提交）=====
+.env
+.env.local
+application-local.yml
+application-local.yaml
+application-secret.yml
+*.p12
+*.jks
+
+# ===== 运行产物 / 日志 =====
+logs/
+*.log
+hs_err_pid*
+
+# ===== 评测结果（迭代 15 之后会大量产生）=====
+# 保留目录结构，但不提交每次跑的明细
+eval/results/runs/
+eval/results/*.csv
+!eval/results/.gitkeep
+
+# ===== 语料 =====
+# 注意：语料【要入库】，不要忽略。
+# 它在 src/main/resources/corpus/ 下，是手写的 6 份小文件、合计约 5000 字，
+# 不占空间，而且是别人复现这个项目的前提。
+# （迭代 1 写这条时以为语料会是几万份外部大文件，实际做下来完全不是。）
+#
+# 下面这个目录留给「将来接入的大批量原始语料」，那种才不该入库。
+data/raw/
+
+# ===== 数据库备份（迭代 21 起）=====
+# 备份是「数据」不是「代码」：体积大、含全量数据、而且和代码版本没有对应关系。
+# 需要它的时候自己 pg_dump 一份就行，不要入库。
+# （迭代 21 为「跑安全测试前先留一份」而备份过 business_db，就是这类文件。）
+backup-*.sql
+*.dump
+
+# ===== 系统 =====
+.DS_Store
+Thumbs.db
+
+# ===== 面试准备材料（迭代 30 起）=====
+# 这里放的是简历条例原稿、面试口播稿、临场问答 —— 是【给我自己用的答案】，
+# 不是项目的组成部分。留在库里有两个问题：
+#   1) 公开访客读到它，会把「这些活是他干的」读成「这些故事是他准备的」；
+#   2) 它对除我之外的读者收益为零。
+# 文件仍然在本地磁盘上，只是不进版本库。要恢复入库：删掉这一节即可。
+#
+# ⚠️ 用 `interview*` 而不是 `interview/` 是有意的：这个目录被打成过
+#    docs/interview.zip（导入语雀用），那个包里有全部文件的副本，
+#    只挡目录会让它从 zip 这条路漏出去。
+docs/interview*
+
+# ===== Python =====
+# scripts/*.py 跑一次就生成，属于机器产物
+__pycache__/
+*.pyc

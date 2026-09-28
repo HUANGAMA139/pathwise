@@ -1,0 +1,16 @@
+# 构建镜像时不要进上下文的文件。
+#
+# 为什么要在意这个：`build: context: .` 会把整个目录打包发给 Docker daemon。
+# target/ 里是上一次编译的产物（几十 MB），.git/ 是完整历史，
+# 一起发过去既慢又让镜像层缓存失效得更频繁。
+
+target/
+.git/
+.gitignore
+.idea/
+*.iml
+.claude/
+*.log
+
+# 5 张表时代的老库转储，只在本地做基线对比时用得到，不进镜像
+backup-*.sql

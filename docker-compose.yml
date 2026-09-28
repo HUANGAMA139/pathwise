@@ -1,0 +1,115 @@
+# smart-data-qa · 开发环境（两个库 + 可选的应用本体）
+#
+# 迭代 29：应用本体也写进了这个文件，但**放在 profile 里**，所以老用法一点没变：
+#   docker compose up -d                          只起两个库（= 以前的行为）
+#   docker compose --profile full up -d --build   一条命令起「应用 + 两个库」
+# 这样你从 IDE 跑应用的习惯不受影响，想一键起整套时也不用记第二个 compose 文件。
+#
+# 为什么是两个独立的库，而不是一个库里建两个 database？
+#   做到 迭代 21（SQL 安全边界）时你会需要：让 Agent 生成的 SQL 只能碰业务库，
+#   完全够不到向量库。物理隔离比配权限省心，也更接近真实生产。
+#
+#   pgvector   : 5432 → RAG 向量库（文档切片、embedding）
+#   business-db: 5433 → 业务库（给 Text2SQL 查的销售/订单数据）
+
+services:
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: sdaq-pgvector
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: sdaq
+      POSTGRES_PASSWORD: sdaq_dev_pwd
+      POSTGRES_DB: rag_db
+      TZ: Asia/Shanghai
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+      # 只在数据卷为空、容器首次初始化时执行一次
+      - ./docker/init-rag-db.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdaq -d rag_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  business-db:
+    image: postgres:16
+    container_name: sdaq-business-db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"          # 注意：宿主机用 5433，避免和上面的 5432 撞端口
+    environment:
+      POSTGRES_USER: sdaq
+      POSTGRES_PASSWORD: sdaq_dev_pwd
+      POSTGRES_DB: business_db
+      TZ: Asia/Shanghai
+    volumes:
+      - business_data:/var/lib/postgresql/data
+      # 迭代 18：业务库的表结构与种子数据（5 张表 / 3 条外键，与 6 份语料咬合）。
+      # 只在数据卷为空、容器首次初始化时执行一次。
+      # 【注意】business-db 从 迭代 1 就起了的话，数据卷已存在，这个脚本不会重跑 ——
+      # 重建步骤见 docs/18-Text2SQL原理与Schema注入.md 第二节。
+      - ./docker/init-business-db.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+      # 迭代 19：扩表到 20 张（新增 15 张，只 DROP 自己那 15 张，不碰上面那 5 张）。
+      # 按文件名顺序在 10-init.sql 之后执行。
+      # 【同样只在数据卷为空时执行】——对已经在跑的库，直接手工灌就行，不用清数据卷：
+      #   docker compose cp docker/init-business-db-extra.sql business-db:/tmp/init-business-db-extra.sql
+      #   docker compose exec business-db psql -U sdaq -d business_db -f /tmp/init-business-db-extra.sql
+      - ./docker/init-business-db-extra.sql:/docker-entrypoint-initdb.d/20-extra.sql:ro
+      # 迭代 21：只读账号（SQL 安全边界里最硬的一层）。
+      # 【它不改任何表结构】，所以对已经在跑的库直接手工灌就行，也不会影响基线：
+      #   docker compose cp docker/init-business-db-ro.sql business-db:/tmp/init-business-db-ro.sql
+      #   docker compose exec business-db psql -U sdaq -d business_db -f /tmp/init-business-db-ro.sql
+      - ./docker/init-business-db-ro.sql:/docker-entrypoint-initdb.d/30-readonly-role.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sdaq -d business_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  # ------------------------------------------------------------------
+  # 迭代 29：应用本体。带 profile，只有显式指定时才起：
+  #   docker compose --profile full up -d --build
+  #   （想单独起它也行：docker compose up -d app）
+  # ------------------------------------------------------------------
+  app:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sdaq-app
+    restart: unless-stopped
+    # 等两个库【真的能接受连接】再起。不等的话，应用一启动就去建 vector 表，必然失败。
+    depends_on:
+      pgvector:
+        condition: service_healthy
+      business-db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"          # /chat · /health · 以及 MCP 的 /mcp
+    environment:
+      # 容器里的 localhost 指容器自己，所以这里必须写【服务名】
+      SDAQ_PGVECTOR_URL: jdbc:postgresql://pgvector:5432/rag_db
+      SDAQ_PGVECTOR_USER: sdaq
+      SDAQ_PGVECTOR_PASSWORD: sdaq_dev_pwd
+      SDAQ_BUSINESS_URL: jdbc:postgresql://business-db:5432/business_db
+      # 迭代 21 起业务库走只读账号（安全边界的第 ③ 层），这里沿用
+      SDAQ_BUSINESS_USER: sdaq_readonly
+      SDAQ_BUSINESS_PASSWORD: sdaq_ro_pwd
+      # 【故意不给默认值】：key 只存在宿主机环境变量里，绝不落进 compose 文件。
+      # 没设的话 compose 会警告并留空，应用启动时才报错——比在这里写个假占位串好。
+      AI_DASHSCOPE_API_KEY: ${AI_DASHSCOPE_API_KEY}
+      TZ: Asia/Shanghai
+    healthcheck:
+      # 打的是应用自己的 /health（它会报缓存命中率和会话数），而不是「端口通不通」
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+volumes:
+  pgvector_data:
+  business_data:

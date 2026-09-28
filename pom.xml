@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.7</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.example</groupId>
+    <artifactId>smart-data-qa</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>smart-data-qa</name>
+    <description>Agent 自主路由「文档检索(RAG)」与「数据库查询(Text2SQL)」的智能数据问答助手</description>
+
+    <!--
+      版本矩阵来自官方 examples 仓库（这是权威来源）：
+        https://github.com/spring-ai-alibaba/examples/blob/main/pom.xml
+      Spring AI Alibaba 的发布物在阿里云仓库，不在 Maven Central，
+      所以下面的 <repositories> 是必需的，别删。
+    -->
+    <properties>
+        <java.version>17</java.version>
+        <spring-ai.version>1.1.0</spring-ai.version>
+        <spring-ai-alibaba.version>1.1.0.0</spring-ai-alibaba.version>
+        <spring-ai-alibaba-extensions.version>1.1.2.1</spring-ai-alibaba-extensions.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-bom</artifactId>
+                <version>${spring-ai-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- 迭代 18 之后做 nl2sql / 更多扩展时会用到 -->
+            <dependency>
+                <groupId>com.alibaba.cloud.ai</groupId>
+                <artifactId>spring-ai-alibaba-extensions-bom</artifactId>
+                <version>${spring-ai-alibaba-extensions.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!--
+          必需：spring-ai 的 starter 会传递引入 WebFlux，Spring Boot 据此判定为「响应式应用」，
+          若 classpath 上没有 WebMVC 又没有响应式服务器，启动会直接失败并报
+          "no ReactiveWebServerFactory bean"。加上 starter-web 后 Boot 会判定为 SERVLET，用 Tomcat 启动。
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- DashScope（通义千问）接入 -->
+        <dependency>
+            <groupId>com.alibaba.cloud.ai</groupId>
+            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
+        </dependency>
+
+        <!--
+          迭代 10：把工具暴露成 MCP Server。
+          用 webmvc 版而不是 webflux 版 —— 本项目是 servlet 技术栈（迭代 1 加 starter-web
+          就是为了让 Spring Boot 判定成 SERVLET 而不是响应式应用），
+          用 webflux 版会和现有栈混用，是不必要的复杂度。
+
+          实测核实过：这条依赖链（spring-ai-autoconfigure-mcp-server-webmvc、
+          spring-ai-mcp、spring-ai-mcp-annotations、mcp-spring-webmvc、mcp-core）
+          全部编译为 Java 17 字节码（major=61），所以 pom 里的 release 17 不用动。
+        -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
+
+        <!-- @McpTool / @McpToolParam 注解（starter 会传递引入，显式声明以便一眼看到） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-mcp-annotations</artifactId>
+        </dependency>
+
+        <!--
+          迭代 14：pgvector 向量库。
+          把 ETL 的第三段（DocumentWriter）从「内存里的一个 List」换成真正的向量库。
+          PgVectorStore 走 Spring Boot 的标准 DataSource，所以还要有 JDBC 和数据源。
+        -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
+        </dependency>
+
+        <!--
+          下面两条如果已经被上面的 starter 传递引入，就是冗余的 —— 但显式写出来
+          是为了让「连库需要什么」一眼可见（和上面 mcp-annotations 那条同一个理由）。
+          postgresql 的版本由 spring-boot-starter-parent 的 BOM 管，不写版本号。
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!--
+          【迭代 21 把 scope 从 runtime 改成了 compile】
+          原来写 runtime 是因为「只是连库用」，没有任何代码在编译期引用驱动类。
+          但 迭代 21 要用 PG 驱动专有的 PgResultSetMetaData.getBaseColumnName()
+          去拿「别名遮不住的底层列名」（脱敏判定要用，见 Text2SqlDatabaseTool.baseColumnName），
+          于是编译期就需要这个包 —— 而 **<scope>runtime</scope> 的依赖不在编译期 classpath 上**，
+          留着 runtime 就会报「程序包 org.postgresql.jdbc 不存在」。
+
+          顺带记一条：这类错（依赖可见性）**静态自检天生查不出来**，只能靠真编译。
+          （scripts/static-check.py 里加了一条窄检查：runtime 作用域的依赖，源码不许 import 它的包。）
+
+          版本仍由 spring-boot-starter-parent 的 BOM 管，不写版本号。
+        -->
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+        </dependency>
+
+        <!--
+          迭代 15：教科书版「基础 RAG」用的 QuestionAnswerAdvisor。
+          它把「检索 → 注入 → 生成」串成一步，是评测的 baseline。
+          注意：两个 Evaluator（RelevancyEvaluator / FactCheckingEvaluator）在
+          spring-ai-client-chat 里（包名 org.springframework.ai.chat.evaluation），
+          那是 ChatClient 所在的模块，已经传递引入了，不用单独声明。
+        -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-advisors-vector-store</artifactId>
+        </dependency>
+
+        <!--
+          迭代 16：混合检索。
+          DocumentJoiner / Query 在 spring-ai-rag 里（org.springframework.ai.rag.retrieval.join）。
+          结果就是这个模块本身——**它只有拼接去重那一个实现，没有 RRF**，
+          所以 RRF 是我们自己实现的一个 DocumentJoiner（见 RrfDocumentJoiner）。
+        -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-rag</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+    <repositories>
+        <!-- 必需：Spring AI Alibaba 的构件在这里，不在 Maven Central -->
+        <repository>
+            <id>aliyunmaven</id>
+            <name>aliyun</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+        </repository>
+        <repository>
+            <id>spring-milestones</id>
+            <name>Spring Milestones</name>
+            <url>https://repo.spring.io/milestone</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>aliyun-plugin</id>
+            <name>aliyun nexus</name>
+            <url>https://maven.aliyun.com/repository/public</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </pluginRepository>
+    </pluginRepositories>
+</project>

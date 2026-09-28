@@ -1,0 +1,16 @@
+experiment,ts,pipeline,scope,cases,judged,route_accuracy,answer_correct,faithfulness,answer_relevancy,ctx_recall_doc,ctx_precision_doc,ctx_recall_llm,ctx_precision_llm,latency_ms_avg,note
+exp15-baseline-limit3,2026-09-24 13:15:23,agent,all,3,3,1.00,1.00,1.00,1.00,1.00,0.47,1.00,0.67,6138,路由准确率在此行；其余指标只在适用的用例上算
+exp15-baseline-limit3,2026-09-24 13:15:23,agent,document,3,3,-,1.00,1.00,1.00,1.00,0.47,1.00,0.67,6138,与 basic-rag 可比的那一档（同一批 document 用例）
+exp15-baseline-limit3,2026-09-24 13:15:23,basic-rag,document,3,3,-,0.67,0.33,1.00,1.00,0.47,1.00,0.67,1055,教科书版 QuestionAnswerAdvisor；无路由能力，且会丢掉片段出处
+exp15-baseline-limit3,2026-09-24 13:36:33,agent,all,3,3,1.00,1.00,1.00,1.00,1.00,0.47,1.00,0.67,5558,路由准确率在此行；其余指标只在适用的用例上算
+exp15-baseline-limit3,2026-09-24 13:36:33,agent,document,3,3,-,1.00,1.00,1.00,1.00,0.47,1.00,0.67,5558,与 basic-rag 可比的那一档（同一批 document 用例）
+exp15-baseline-limit3,2026-09-24 13:36:33,basic-rag,document,3,3,-,0.67,0.33,1.00,1.00,0.47,1.00,0.67,1049,教科书版 QuestionAnswerAdvisor；无路由能力，且会丢掉片段出处
+exp15-baseline-limit3,2026-09-24 13:39:13,agent,all,3,3,1.00,1.00,1.00,1.00,1.00,0.47,1.00,0.67,6169,路由准确率在此行；其余指标只在适用的用例上算
+exp15-baseline-limit3,2026-09-24 13:39:13,agent,document,3,3,-,1.00,1.00,1.00,1.00,0.47,1.00,0.67,6169,与 basic-rag 可比的那一档（同一批 document 用例）
+exp15-baseline-limit3,2026-09-24 13:39:13,basic-rag,document,3,3,-,0.67,1.00,1.00,1.00,0.47,1.00,0.67,1197,教科书版 QuestionAnswerAdvisor；无路由能力，且会丢掉片段出处
+exp15-baseline,2026-09-24 13:46:51,agent,all,28,28,0.89,0.89,0.75,1.00,0.88,0.51,0.88,0.64,4456,路由准确率在此行；其余指标只在适用的用例上算
+exp15-baseline,2026-09-24 13:46:51,agent,document,15,15,-,0.80,0.92,1.00,1.00,0.53,1.00,0.63,5456,与 basic-rag 可比的那一档（同一批 document 用例）
+exp15-baseline,2026-09-24 13:46:51,basic-rag,document,15,15,-,0.73,1.00,0.93,1.00,0.53,1.00,0.60,1425,教科书版 QuestionAnswerAdvisor；无路由能力，且会丢掉片段出处
+exp15-baseline,2026-09-24 13:54:28,agent,all,28,28,0.86,0.86,0.93,1.00,0.87,0.52,1.00,0.64,4226,路由准确率在此行；其余指标只在适用的用例上算
+exp15-baseline,2026-09-24 13:54:28,agent,document,15,15,-,0.73,0.91,1.00,1.00,0.55,1.00,0.64,5006,与 basic-rag 可比的那一档（同一批 document 用例）
+exp15-baseline,2026-09-24 13:54:28,basic-rag,document,15,15,-,0.73,1.00,0.93,1.00,0.53,1.00,0.61,1471,教科书版 QuestionAnswerAdvisor；无路由能力，且会丢掉片段出处

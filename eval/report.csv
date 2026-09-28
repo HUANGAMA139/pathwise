@@ -1,0 +1,7 @@
+experiment,ts,cases,route_accuracy,route_correct,e2e_correct,exec_accuracy,exec_cases,ctx_precision_llm,ctx_recall_llm,faithfulness,answer_relevancy,latency_ms_avg,confusion,note
+exp23-report,2026-09-27 20:01:44,28,0.89 (25/28),25,0.71,0.38 (3/8),8,0.70,1.00,1.00,1.00,5379,document->document:12;document->database:1;document->none:2;database->database:4;both->both:4;none->none:5,迭代 23 一条命令出全部指标；详见 eval/report.md
+exp23-report,2026-09-27 20:10:58,28,0.89 (25/28),25,0.71,0.38 (3/8),8,0.69,1.00,1.00,1.00,5956,document->document:12;document->database:1;document->none:2;database->database:4;both->both:4;none->none:5,迭代 23 一条命令出全部指标；详见 eval/report.md
+exp28-vector-none,2026-09-27 21:43:35,28,0.96 (27/28),27,0.79,0.38 (3/8),8,0.62,1.00,1.00,1.00,5467,document->document:14;document->database:1;database->database:4;both->both:4;none->none:5,迭代 23 一条命令出全部指标；详见 eval/report.md
+exp28-vector-llm,2026-09-27 21:50:39,28,0.96 (27/28),27,0.79,0.38 (3/8),8,0.63,1.00,1.00,1.00,5928,document->document:14;document->database:1;database->database:4;both->both:4;none->none:5,迭代 23 一条命令出全部指标；详见 eval/report.md
+exp28-hybrid-llm,2026-09-27 21:56:58,28,0.93 (26/28),26,0.75,0.38 (3/8),8,0.66,1.00,1.00,0.94,5829,document->document:13;document->database:1;document->none:1;database->database:4;both->both:4;none->none:5,迭代 23 一条命令出全部指标；详见 eval/report.md
+exp23-report,2026-09-28 18:30:49,28,0.93 (26/28),26,0.75,0.38 (3/8),8,0.66,1.00,1.00,1.00,6693,document->document:13;document->database:1;document->none:1;database->database:4;both->both:4;none->none:5,迭代 23 一条命令出全部指标；详见 eval/report.md
