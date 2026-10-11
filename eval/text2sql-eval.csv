@@ -1,0 +1,624 @@
+run,set,arm,case_id,question,expected_route,actual_route,executable,sql_intent,exec_accuracy,row_count,latency_ms,schema_chars,sql,note
+2026-09-27 18:59:02,branch,exp18-form,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,0.00,1,2213,8301,"SELECT SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND EXTRACT(YEAR FROM so.created_at) = 2026
+  AND EXTRACT(QUARTER FROM so.created_at) = 2",
+2026-09-27 18:59:02,branch,exp18-form,D2,2026年第二季度各区域的销售额排名,,,1,1.00,0.00,6,2064,8301,"SELECT 
+  so.region,
+  SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+WHERE so.created_at >= '2026-04-01' 
+  AND so.created_at < '2026-07-01'
+  AND so.status IN ('PAID', 'COMPLETED')
+GROUP BY so.region
+ORDER BY total_sales DESC",
+2026-09-27 18:59:02,branch,exp18-form,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,0.00,1,2255,8301,"SELECT SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+JOIN products p ON so.product_code = p.product_code
+WHERE p.line_code = 'XR'
+  AND so.created_at >= '2026-04-01'
+  AND so.created_at < '2026-07-01'
+  AND so.status IN ('PAID', 'COMPLETED')",
+2026-09-27 18:59:02,branch,exp18-form,D4,2026年第二季度全国销售额合计是多少？,,,1,1.00,0.00,1,1390,8301,"SELECT SUM(order_amount) AS total_sales
+FROM sales_orders
+WHERE EXTRACT(YEAR FROM created_at) = 2026
+  AND EXTRACT(QUARTER FROM created_at) = 2",
+2026-09-27 18:59:02,branch,exp18-form,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,0.00,1,2795,8301,"SELECT COALESCE(SUM(o.order_amount), 0) AS total_sales
+FROM sales_orders o
+JOIN regions r ON o.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND o.created_at >= '2026-01-01'::timestamp
+  AND o.created_at < '2026-04-01'::timestamp
+  AND o.status IN ('PAID', 'COMPLETED')",
+2026-09-27 18:59:02,branch,exp18-form,D6,华东区都包含哪些省份？,,,1,1.00,0.00,0,649,8301,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东区'",
+2026-09-27 18:59:02,branch,exp18-form,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1739,8301,-- 无法回答：表中没有福建省的销售数据，只有省份到销售区域的映射（region_provinces），但 sales_orders 等销售主表中不包含 province 字段，且 orders_archive 和 sales_orders 均无城市/省份信息；无法将销售订单关联到福建省。,
+2026-09-27 18:59:02,branch,exp18-form,D8,2024年华东区的销售额是多少？,,,1,1.00,0.00,1,1620,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND EXTRACT(YEAR FROM so.created_at) = 2024",
+2026-09-27 18:59:02,branch,exp18-form,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,0.00,1,2051,8301,"SELECT 
+  AVG(so.order_amount) AS avg_order_amount
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND so.created_at >= '2026-04-01'
+  AND so.created_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,no-filter,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2168,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,no-filter,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2248,8301,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-27 18:59:02,branch,no-filter,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2545,8301,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,no-filter,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,1918,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,no-filter,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,1.00,1,2034,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-27 18:59:02,branch,no-filter,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,783,8301,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-27 18:59:02,branch,no-filter,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,2245,8301,-- 无法回答：订单表（sales_orders / orders_archive）中没有「省份」字段，只有「区域名」（region）；虽然 region_provinces 表提供了「省份 → 区域」映射，但无法反向确定某省对应哪些订单（因订单不存 province），且问题要求的是「福建省」而非其所属销售区域的销售额。,
+2026-09-27 18:59:02,branch,no-filter,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2164,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-27 18:59:02,branch,no-filter,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,1981,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,filtered,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2949,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,filtered,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2187,3680,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-27 18:59:02,branch,filtered,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2595,4077,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,filtered,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,1952,3728,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,filtered,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,1.00,1,2093,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-27 18:59:02,branch,filtered,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,814,3638,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-27 18:59:02,branch,filtered,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1677,3491,-- 无法回答：订单表（sales_orders）中没有「省份」字段，只有「区域」字段；虽然 region_provinces 表可查出「福建」属于哪个区域，但无法将订单与具体省份关联，因此无法统计「福建省」的销售额。,
+2026-09-27 18:59:02,branch,filtered,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2183,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-27 18:59:02,branch,filtered,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2134,3462,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,full,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2189,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,full,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2243,3680,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-27 18:59:02,branch,full,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2533,4077,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,full,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,2186,3728,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,branch,full,D5,2026年第一季度华东区的销售额是多少？,,,1,0.00,1.00,1,2024,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-27 18:59:02,branch,full,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,776,3638,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-27 18:59:02,branch,full,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1737,3491,-- 无法回答：订单表（sales_orders）中没有省份字段，只有区域（region）字段；虽然 region_provinces 表提供了省份到区域的映射，但销售额需按订单统计，而订单不直接关联省份，因此无法精确归集到「福建省」的销售额。,
+2026-09-27 18:59:02,branch,full,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2069,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-27 18:59:02,branch,full,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2050,3462,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,e2e,wired,B01,2026年Q2华东区销售额是多少？,database,DATABASE,1,1.00,1.00,1,5780,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,e2e,wired,B02,各区域排名,database,DATABASE,1,0.50,0.00,6,6777,0,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+GROUP BY region
+ORDER BY net_sales DESC","结果里缺期望数字 36,100,000, 17,250,000, 8,420,000, 3,290,000, 2,800,000, 1,500,000"
+2026-09-27 18:59:02,e2e,wired,B03,华东区营收多少,database,DATABASE,1,1.00,0.00,1,4541,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS revenue
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')","结果里缺期望数字 36,100,000"
+2026-09-27 18:59:02,e2e,wired,B04,2026年二季度一共卖了多少钱,database,DATABASE,1,1.00,1.00,1,4465,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,e2e,wired,X01,2026年Q2华东区销售额是多少？顺便说下销售额的口径是怎么定的,both,BOTH,1,1.00,1.00,1,8247,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-27 18:59:02,e2e,wired,X02,各区域排名，另外说明退货金额什么时候扣减,both,BOTH,0,unparsed,0.00,0,6586,0,-- 问题中“各区域排名”未指明按什么指标排名（如销售额、订单数、回款额等），且“退货金额什么时候扣减”是业务规则说明，非 SQL 可回答的查询类问题，因此无法生成有效 SQL,
+2026-09-27 18:59:02,e2e,wired,X03,华东区销售额是多少？并说明华东包含哪些省,both,BOTH,0,0.00,0.00,0,8143,0,"SELECT 
+  SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+WHERE o.region = '华东'
+  AND o.status IN ('COMPLETED', 'REFUNDED');
+
+SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'
+-- [已阻止] 多语句：一条语句之外还有别的语句（分号后面还有内容）",
+2026-09-27 18:59:02,e2e,wired,X04,华东区销售额是多少？还有客单价怎么算,both,BOTH,1,1.00,0.00,1,13711,0,"SELECT 
+  SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales,
+  SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'","结果里缺期望数字 36,100,000"
+2026-09-28 21:14:25,branch,exp18-form,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,0.00,1,2256,8301,"SELECT SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND EXTRACT(YEAR FROM so.created_at) = 2026
+  AND EXTRACT(QUARTER FROM so.created_at) = 2",
+2026-09-28 21:14:25,branch,exp18-form,D2,2026年第二季度各区域的销售额排名,,,1,1.00,0.00,6,2167,8301,"SELECT 
+  so.region,
+  SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+WHERE so.created_at >= '2026-04-01' 
+  AND so.created_at < '2026-07-01'
+  AND so.status IN ('PAID', 'COMPLETED')
+GROUP BY so.region
+ORDER BY total_sales DESC",
+2026-09-28 21:14:25,branch,exp18-form,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,0.00,1,2292,8301,"SELECT SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+JOIN products p ON so.product_code = p.product_code
+WHERE p.line_code = 'XR'
+  AND so.created_at >= '2026-04-01'::timestamp
+  AND so.created_at < '2026-07-01'::timestamp
+  AND so.status IN ('PAID', 'COMPLETED')",
+2026-09-28 21:14:25,branch,exp18-form,D4,2026年第二季度全国销售额合计是多少？,,,1,1.00,0.00,1,1882,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+WHERE so.created_at >= '2026-04-01' AND so.created_at < '2026-07-01'
+  AND so.status IN ('PAID', 'COMPLETED')",
+2026-09-28 21:14:25,branch,exp18-form,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,0.00,1,2463,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND so.created_at >= '2026-01-01'::timestamp
+  AND so.created_at < '2026-04-01'::timestamp
+  AND so.status IN ('PAID', 'COMPLETED')",
+2026-09-28 21:14:25,branch,exp18-form,D6,华东区都包含哪些省份？,,,1,1.00,0.00,0,693,8301,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东区'",
+2026-09-28 21:14:25,branch,exp18-form,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1670,8301,-- 无法回答：表中没有福建省的销售数据，只有省份到销售区域的映射（region_provinces），但 sales_orders 等销售主表中不包含 province 字段，且 orders_archive 和 sales_orders 均无城市/省份信息；无法将销售订单关联到福建省。,
+2026-09-28 21:14:25,branch,exp18-form,D8,2024年华东区的销售额是多少？,,,1,1.00,0.00,1,1698,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND EXTRACT(YEAR FROM so.created_at) = 2024",
+2026-09-28 21:14:25,branch,exp18-form,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,0.00,1,2035,8301,"SELECT 
+  AVG(so.order_amount) AS avg_order_amount
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND so.created_at >= '2026-04-01' 
+  AND so.created_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,no-filter,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2099,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,no-filter,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2218,8301,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-28 21:14:25,branch,no-filter,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2555,8301,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,no-filter,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,1919,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,no-filter,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,1.00,1,2257,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-28 21:14:25,branch,no-filter,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,863,8301,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-28 21:14:25,branch,no-filter,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1725,8301,-- 无法回答：订单表（sales_orders / orders_archive）中没有「省份」字段，只有「区域名」（region）；福建省所属的销售区域需通过 region_provinces 表映射，但订单金额无法按省份聚合，因订单表不存 province。,
+2026-09-28 21:14:25,branch,no-filter,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2156,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-28 21:14:25,branch,no-filter,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2547,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,filtered,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,3180,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,filtered,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2224,3680,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-28 21:14:25,branch,filtered,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2564,4077,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,filtered,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,1985,3728,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,filtered,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,1.00,1,2020,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-28 21:14:25,branch,filtered,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,884,3638,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-28 21:14:25,branch,filtered,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1676,3491,-- 销售订单表（sales_orders）中没有省份字段，只有区域（region）字段；福建省所属区域需通过 region_provinces 表映射，但销售额需按订单所在区域汇总，无法精确到省份级别。因此该问题无法回答。,
+2026-09-28 21:14:25,branch,filtered,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2215,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-28 21:14:25,branch,filtered,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2109,3462,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,full,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2094,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,full,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2242,3680,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-28 21:14:25,branch,full,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2556,4077,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,full,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,2294,3728,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,branch,full,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,1.00,1,2183,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-28 21:14:25,branch,full,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,815,3638,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-28 21:14:25,branch,full,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1806,3491,-- 销售订单表（sales_orders）中没有省份字段，只有区域（region）字段；福建省所属区域需通过 region_provinces 表映射，但 sales_orders 无法直接关联到 province_name，且无订单级省份信息，因此无法按省份统计销售额。,
+2026-09-28 21:14:25,branch,full,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2082,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-28 21:14:25,branch,full,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2134,3462,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,e2e,wired,B01,2026年Q2华东区销售额是多少？,database,DATABASE,1,1.00,1.00,1,7295,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,e2e,wired,B02,各区域排名,database,DATABASE,1,0.50,0.00,6,7927,0,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+GROUP BY region
+ORDER BY net_sales DESC","结果里缺期望数字 36,100,000, 17,250,000, 8,420,000, 3,290,000, 2,800,000, 1,500,000"
+2026-09-28 21:14:25,e2e,wired,B03,华东区营收多少,database,DATABASE,1,1.00,0.00,1,5419,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS revenue
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')","结果里缺期望数字 36,100,000"
+2026-09-28 21:14:25,e2e,wired,B04,2026年二季度一共卖了多少钱,database,DATABASE,1,1.00,1.00,1,4511,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,e2e,wired,X01,2026年Q2华东区销售额是多少？顺便说下销售额的口径是怎么定的,both,BOTH,1,1.00,1.00,1,9734,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:14:25,e2e,wired,X02,各区域排名，另外说明退货金额什么时候扣减,both,BOTH,0,unparsed,0.00,0,7176,0,-- 问题中“各区域排名”未指明按什么指标排名（如销售额、订单数、回款额等），且“退货金额什么时候扣减”是业务规则说明，非 SQL 可查询内容，因此无法生成有效 SQL,
+2026-09-28 21:14:25,e2e,wired,X03,华东区销售额是多少？并说明华东包含哪些省,both,BOTH,1,1.00,0.00,1,8777,0,"SELECT 
+  (SELECT SUM(order_amount - COALESCE(refund_amount, 0)) 
+   FROM sales_orders 
+   WHERE region = '华东' AND status IN ('COMPLETED', 'REFUNDED')) AS net_sales,
+  (SELECT STRING_AGG(province_name, ', ') 
+   FROM region_provinces 
+   WHERE region_name = '华东') AS provinces","结果里缺期望数字 36,100,000"
+2026-09-28 21:14:25,e2e,wired,X04,华东区销售额是多少？还有客单价怎么算,both,BOTH,1,1.00,0.00,1,16607,0,"SELECT 
+  SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales,
+  SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'","结果里缺期望数字 36,100,000"
+2026-09-28 21:18:14,branch,exp18-form,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,0.00,1,2796,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND so.created_at >= '2026-04-01'
+  AND so.created_at < '2026-07-01'
+  AND so.status IN ('PAID', 'COMPLETED')",
+2026-09-28 21:18:14,branch,exp18-form,D2,2026年第二季度各区域的销售额排名,,,1,1.00,0.00,6,2144,8301,"SELECT 
+  so.region,
+  SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+WHERE so.created_at >= '2026-04-01' 
+  AND so.created_at < '2026-07-01'
+  AND so.status IN ('PAID', 'COMPLETED')
+GROUP BY so.region
+ORDER BY total_sales DESC",
+2026-09-28 21:18:14,branch,exp18-form,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,0.00,1,2153,8301,"SELECT SUM(so.order_amount) AS total_sales
+FROM sales_orders so
+JOIN products p ON so.product_code = p.product_code
+WHERE p.line_code = 'XR'
+  AND so.created_at >= '2026-04-01'
+  AND so.created_at < '2026-07-01'
+  AND so.status IN ('PAID', 'COMPLETED')",
+2026-09-28 21:18:14,branch,exp18-form,D4,2026年第二季度全国销售额合计是多少？,,,1,1.00,0.00,1,2123,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+WHERE so.status IN ('PAID', 'COMPLETED')
+  AND so.created_at >= '2026-04-01'
+  AND so.created_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,exp18-form,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,0.00,1,8311,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND so.created_at >= '2026-01-01'::timestamp
+  AND so.created_at < '2026-04-01'::timestamp
+  AND so.status IN ('PAID', 'COMPLETED')",
+2026-09-28 21:18:14,branch,exp18-form,D6,华东区都包含哪些省份？,,,1,1.00,0.00,0,670,8301,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东区'",
+2026-09-28 21:18:14,branch,exp18-form,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1745,8301,-- 无法回答：表中没有福建省的销售数据，只有省份到销售区域的映射（region_provinces），但 sales_orders 等销售主表中没有 province 字段，且 orders_archive 和 sales_orders 均无 province 或 address 字段，无法按福建省统计销售额。,
+2026-09-28 21:18:14,branch,exp18-form,D8,2024年华东区的销售额是多少？,,,1,1.00,0.00,1,1659,8301,"SELECT COALESCE(SUM(so.order_amount), 0) AS total_sales
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND EXTRACT(YEAR FROM so.created_at) = 2024",
+2026-09-28 21:18:14,branch,exp18-form,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,0.00,1,1908,8301,"SELECT 
+  AVG(so.order_amount) AS avg_order_amount
+FROM sales_orders so
+JOIN regions r ON so.region = r.region_name
+WHERE r.region_name = '华东区'
+  AND so.created_at >= '2026-04-01'
+  AND so.created_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,no-filter,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2065,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,no-filter,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2407,8301,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-28 21:18:14,branch,no-filter,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2539,8301,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,no-filter,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,1813,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,no-filter,D5,2026年第一季度华东区的销售额是多少？,,,1,0.00,1.00,1,2104,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-28 21:18:14,branch,no-filter,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,689,8301,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-28 21:18:14,branch,no-filter,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1763,8301,-- 无法回答：订单表（sales_orders / orders_archive）中没有「省份」字段，只有「区域名」（region）；虽然 region_provinces 表提供了「省份 → 区域」的映射，但订单本身不记录客户所在省份，因此无法按「福建省」统计销售额。,
+2026-09-28 21:18:14,branch,no-filter,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,1939,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-28 21:18:14,branch,no-filter,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2054,8301,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,filtered,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2703,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,filtered,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2141,3680,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-28 21:18:14,branch,filtered,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2520,4077,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,filtered,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,2276,3728,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,filtered,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,1.00,1,2103,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-28 21:18:14,branch,filtered,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,810,3638,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-28 21:18:14,branch,filtered,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1619,3491,-- 无法回答：订单表（sales_orders）中没有「省份」字段，只有「区域」字段；虽然 region_provinces 表可查出「福建」属于哪个区域，但无法将订单与具体省份关联，因此无法按省份统计销售额。,
+2026-09-28 21:18:14,branch,filtered,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2008,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-28 21:18:14,branch,filtered,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2013,3462,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,full,D1,2026年第二季度华东区的销售额是多少？,,,1,1.00,1.00,1,2109,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,full,D2,2026年第二季度各区域的销售额排名,,,1,1.00,1.00,6,2254,3680,"SELECT region, SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'
+GROUP BY region
+ORDER BY net_sales DESC",
+2026-09-28 21:18:14,branch,full,D3,2026年第二季度 XR 产品线的销售额是多少？,,,1,1.00,1.00,1,2562,4077,"SELECT SUM(o.order_amount - COALESCE(o.refund_amount, 0)) AS net_sales
+FROM sales_orders o
+JOIN products p ON p.product_code = o.product_code
+WHERE p.line_code = 'XR'
+  AND o.status IN ('COMPLETED', 'REFUNDED')
+  AND o.completed_at >= '2026-04-01' AND o.completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,full,D4,2026年第二季度全国销售额合计是多少？,,,1,0.00,1.00,1,1894,3728,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,branch,full,D5,2026年第一季度华东区的销售额是多少？,,,1,1.00,1.00,1,2086,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-01-01' AND completed_at < '2026-04-01'",
+2026-09-28 21:18:14,branch,full,D6,华东区都包含哪些省份？,,,1,1.00,1.00,5,825,3638,"SELECT province_name
+FROM region_provinces
+WHERE region_name = '华东'",
+2026-09-28 21:18:14,branch,full,D7,2026年第二季度福建省的销售额是多少？,,,0,unparsed,1.00,0,1895,3491,-- 订单表 sales_orders 中没有省份字段，只有 region（区域名），而「福建省」属于哪个销售区域需查 region_provinces 表；但销售额必须按订单表中的 region 汇总，无法直接按省份统计。因此，该问题在当前表结构下无法直接回答。,
+2026-09-28 21:18:14,branch,full,D8,2024年华东区的销售额是多少？,,,1,1.00,1.00,1,2085,3685,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM orders_archive
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2024-01-01' AND completed_at < '2025-01-01'",
+2026-09-28 21:18:14,branch,full,D9,2026年第二季度华东区的客单价是多少？,,,1,1.00,1.00,1,2061,3462,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,e2e,wired,B01,2026年Q2华东区销售额是多少？,database,DATABASE,1,1.00,1.00,1,6182,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,e2e,wired,B02,各区域排名,database,DATABASE,1,0.50,0.00,6,5958,0,"SELECT region, COUNT(*) AS order_count
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+GROUP BY region
+ORDER BY order_count DESC","结果里缺期望数字 36,100,000, 17,250,000, 8,420,000, 3,290,000, 2,800,000, 1,500,000"
+2026-09-28 21:18:14,e2e,wired,B03,华东区营收多少,database,DATABASE,1,1.00,0.00,1,4962,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS revenue
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')","结果里缺期望数字 36,100,000"
+2026-09-28 21:18:14,e2e,wired,B04,2026年二季度一共卖了多少钱,database,DATABASE,1,1.00,1.00,1,4905,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,e2e,wired,X01,2026年Q2华东区销售额是多少？顺便说下销售额的口径是怎么定的,both,BOTH,1,1.00,1.00,1,9495,0,"SELECT SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales
+FROM sales_orders
+WHERE region = '华东'
+  AND status IN ('COMPLETED', 'REFUNDED')
+  AND completed_at >= '2026-04-01' AND completed_at < '2026-07-01'",
+2026-09-28 21:18:14,e2e,wired,X02,各区域排名，另外说明退货金额什么时候扣减,both,BOTH,0,unparsed,0.00,0,7618,0,-- 问题中“各区域排名”未指明按什么指标排名（如销售额、订单数、回款额等），且“退货金额什么时候扣减”是业务规则说明，非 SQL 可回答的查询类问题；因此无法生成有效 SQL,
+2026-09-28 21:18:14,e2e,wired,X03,华东区销售额是多少？并说明华东包含哪些省,both,BOTH,1,1.00,0.00,1,7804,0,"SELECT 
+  (SELECT SUM(order_amount - COALESCE(refund_amount, 0)) 
+   FROM sales_orders 
+   WHERE region = '华东' AND status IN ('COMPLETED', 'REFUNDED')) AS net_sales,
+  (SELECT STRING_AGG(province_name, ', ') 
+   FROM region_provinces 
+   WHERE region_name = '华东') AS provinces","结果里缺期望数字 36,100,000"
+2026-09-28 21:18:14,e2e,wired,X04,华东区销售额是多少？还有客单价怎么算,both,BOTH,1,1.00,0.00,1,9254,0,"SELECT 
+  SUM(order_amount - COALESCE(refund_amount, 0)) AS net_sales,
+  SUM(order_amount - COALESCE(refund_amount, 0)) / COUNT(*) AS avg_order_value
+FROM sales_orders
+WHERE region = '华东'
+  AND status = 'COMPLETED'","结果里缺期望数字 36,100,000"
